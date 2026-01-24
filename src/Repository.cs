@@ -17,6 +17,7 @@ namespace MongoDotnetORM
             await _collection.InsertOneAsync(entity);
             return entity;
         }
+
         Task<List<T>> InsertManyAsync(IEnumerable<T> entities);
         Task<T> FindByIdAsync(string id);
         Task<List<T>> FindAllAsync();
@@ -30,5 +31,36 @@ namespace MongoDotnetORM
 
         Task<long> CountAsync(Expression<Func<T, bool>> filter);
         IQueryable<T> AsQueryable();
+
+        private SetTimestamps(T entity, bool isNew)
+        {
+            var now = DateTime.UtcNow;
+
+            if(entity is BaseEntity entityBase)
+            {
+                if(isNew)
+                    entityBase.CreatedAt = now;
+                entityBase.UpdatedAt = now;
+            }
+            else
+            {
+                var props = typeof(T).GetProperties();
+
+                foreach (var item in props)
+                {
+                    if(isNew && item.GetCustomAttributes<CreatedDateAttribute>() != null)
+                    {
+                        item.SetValue(entity, now);
+                    }
+
+                    if (item.GetCustomAttribute<UpdatedDateAttribute>() != null)
+                    {
+                        item.SetValue(entity, now);
+                    }
+                }
+            }
+
+
+        }
     }
 }
