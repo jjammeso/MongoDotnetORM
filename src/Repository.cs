@@ -1,7 +1,9 @@
-﻿using MongoDB.Driver;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
 using System.Linq.Expressions;
+using System.Reflection;
 
-namespace MongoDotnetORM
+namespace src
 {
     public class Repository<T>: IRepository<T> where T : class
     {
@@ -18,21 +20,71 @@ namespace MongoDotnetORM
             return entity;
         }
 
-        Task<List<T>> InsertManyAsync(IEnumerable<T> entities);
-        Task<T> FindByIdAsync(string id);
-        Task<List<T>> FindAllAsync();
-        Task<List<T>> FindAsync(Expression<Func<T, bool>> filter);
-        Task<T> FindOneAsync(Expression<Func<T, bool>> filter);
+        public async Task<List<T>> InsertManyAsync(IEnumerable<T> entities)
+        {
+            var entitiesList = entities.ToList();
 
-        Task<T> UpdateAsync(string id, T entity);
-        Task<bool> DeleteAsync(string id);
+            foreach(var entity in entitiesList)
+            {
 
-        Task<long> DeleteManyAsync(Expression<Func<T, bool>> filter);
+                SetTimestamps(entity, isNew: true);
+            }
+            await _collection.InsertManyAsync(entitiesList);
 
-        Task<long> CountAsync(Expression<Func<T, bool>> filter);
-        IQueryable<T> AsQueryable();
+            return entitiesList;
+        }
 
-        private SetTimestamps(T entity, bool isNew)
+        public async Task<T> FindByIdAsync(string id)
+        {
+            var filter = Builders<T>.Filter.Eq("_id", ObjectId.Parse(id));
+            return await _collection.Find(filter).FirstOrDefaultAsync();
+        }
+        public async Task<List<T>> FindAllAsync()
+        {
+            return await _collection.Find(_ => true).ToListAsync();
+        }
+        public async Task<List<T>> FindAsync(Expression<Func<T, bool>> filter)
+        {
+            return await _collection.Find(filter).ToListAsync();
+        }
+        public async Task<T> FindOneAsync(Expression<Func<T, bool>> filter)
+        {
+            return await _collection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<T> UpdateAsync(string id, T entity)
+        {
+            SetTimestamps(entity, isNew: false);
+            var filter = Builders<T>.Filter.Eq("_id", ObjectId.Parse(id));
+            await _collection.ReplaceOneAsync(filter, entity);
+            return entity;
+        }
+
+        public async Task<bool> DeleteAsync(string id)
+        {
+            var filter = Builders<T>.Filter.Eq("_id", ObjectId.Parse(id));
+            var result = await _collection.DeleteOneAsync(filter);
+            return result.DeletedCount > 0;
+        }
+
+        public async Task<long> DeleteManyAsync(Expression<Func<T, bool>> filter)
+        {
+            var result = await _collection.DeleteManyAsync(filter);
+            return result.DeletedCount;
+        }
+
+        public async Task<long> CountAsync(Expression<Func<T, bool>>? filter = null)
+        {
+            if (filter == null)
+                return await _collection.CountDocumentsAsync(_ => true);
+            return await _collection.CountDocumentsAsync(filter);
+        }
+        public IQueryable<T> AsQueryable()
+        {
+            return _collection.AsQueryable();
+        }
+
+        private void SetTimestamps(T entity, bool isNew)
         {
             var now = DateTime.UtcNow;
 
@@ -59,8 +111,6 @@ namespace MongoDotnetORM
                     }
                 }
             }
-
-
         }
     }
 }

@@ -17,7 +17,8 @@ namespace MongoDotnetORM
 
         public Repository<T> GetRepository<T>() where T : BaseEntity
         {
-            var repo = new Repository<T>(database);
+            var collection = database.GetCollection<T>(typeof(T).ToString() + 's');
+            var repo = new Repository<T>(collection);
             return repo;
         }
     }
