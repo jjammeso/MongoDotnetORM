@@ -18,5 +18,7 @@ namespace src
 
         Task<long> CountAsync(Expression<Func<T, bool>> filter);
         IQueryable<T> AsQueryable();
+
+
     }
 }
