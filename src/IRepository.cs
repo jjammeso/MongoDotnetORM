@@ -1,7 +1,6 @@
-﻿
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 
-namespace MongoDotnetORM
+namespace src
 {
     public interface IRepository<T> where T : class
     {
