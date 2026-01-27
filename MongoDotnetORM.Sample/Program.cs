@@ -40,7 +40,18 @@ async Task RunTestAsync()
         .OrderBy(u => u.Username)
         .Take(10);
 
+    var queryTwo = userRepo.AsQueryable().Where(d => d.Age > 0);
+
     var results = query.ToList();
+    var results2 = queryTwo.ToList();
+
+    Console.WriteLine("Printing users greater than 25 whose isername is john_doe");
+   foreach( var item in results )
+        Console.WriteLine(item);
+
+    Console.WriteLine("Printing users greater than 0");
+    foreach (var item in results2)
+        Console.WriteLine(item);
 
     // Count
     var count = await userRepo.CountAsync(u => u.Age > 25);
