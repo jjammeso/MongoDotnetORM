@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using System.Reflection;
 
 namespace src
 {
@@ -6,12 +7,12 @@ namespace src
     {
         private readonly Dictionary<Type, object> _repositories = new Dictionary<Type, object>();
 
-        public IMongoDatabase database;
+        private readonly IMongoDatabase _database;
 
         public DataSource(string connectionString, string databaseName)
         {
             var client = new MongoClient(connectionString);
-            database = client.GetDatabase(databaseName);
+            _database = client.GetDatabase(databaseName);
         }
 
         public IRepository<T> GetRepository<T>() where T : class
@@ -23,10 +24,24 @@ namespace src
                 return (IRepository<T>)_repositories[type];
             }
 
-            var collection = database.GetCollection<T>(typeof(T).ToString() + 's');
+            var collectionName = GetCollectionName<T>();
+            var collection = _database.GetCollection<T>(collectionName);
             var repo = new Repository<T>(collection);
             _repositories[type] = repo;
             return repo;
+        }
+
+        private string GetCollectionName<T>()
+        {
+            var type = typeof(T);
+            var entityAttr = type.GetCustomAttribute<EntityAttribute>();
+
+            if (entityAttr != null && !string.IsNullOrEmpty(entityAttr.CollectionName))
+            {
+                return entityAttr.CollectionName;
+            }
+
+            return type.Name.ToLower() + "s";
         }
     }
 }
